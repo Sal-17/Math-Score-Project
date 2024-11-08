@@ -1,0 +1,262 @@
+Consider the following research questions.
+
+What explains the observed lower average math scores of females relative to males?
+Are females less math oriented than males?
+If you were trying to answer the latter question, ideally you'd like to run a randomized controlled experiment in which, hypothetically, gender could be randomly assigned to subjects. Then, one would simply compare average scores of the two groups. Since such an experiment is not feasible, we need to resort to observational data such as PISA. However, it is easy to find several confounding factors that explain math score, and do systematically covary with gender. Such confounders need be controlled for in linear regression models. But problems do not end there.
+
+Consider institutions of countries or culture. Some countries have better education systems than others, and some countries are culturally more gender-equal than others. As Nollenberger et al.(2016) state "it is possible that greater gender equality leads to a reduction in the math gender gap, ... in countries where girls perform relatively better at math, women might also be more prepared, access better jobs, earn higher wages, and be more easily promoted and politically empowered, leading to greater gender equality".
+
+This is the so-called reverse causality problem. The authors' strategy to overcome this problem is to focus on the second-generation immigrants (students) who have lived in a host country since birth, and are exposed to the same host-country institutions. These students will be exposed to the cultural beliefs of their parents' ancestry country. But note that the math test scores of these students are unlikely to affect culture or institutions of of their parents' ancestry country. Hence, the aforementioned reverse causality problem is unlikely to occur.
+
+Nollenberger et al.(2016) estimate different versions of the following specification:
+
+ 
+where
+
+ denotes the (plausible) math test score of student 
+ from cohort 
+ who lives in country 
+, and is of ancestry 
+,
+ is an indicator equal to one if student 
+ is a girl and zero otherwise,
+ is the gender equality index from student 
+'s country of ancestry 
+,
+ denotes a set of control variables which will vary depending on the specification considered,
+ denotes the ancestry country dummy (to control for time invariant country of ancestry characteristics),
+ denotes the host country dummy (to control for time invariant host country characteristics),
+ denotes the PISA cohort dummy (to control for student invariant cohort characteristics).
+Host country dummy is interacted with the female dummy to account for host country educational gender gaps.
+The coefficient of interest is 
+, which captures the role of culture on gender equality in explaining gender differences in the math test scores of second-generation immigrant girls relative to boys.
+
+Below you will find the description of the main variables used in the regressions in Table 1.
+
+variable	description
+year	cohort
+pv5math	(plausible) math test score 5
+ggi	gender gap index
+female	indicator: 
+ if female, 
+ otherwise
+age	age in years and month
+diffgrade	indicator: 
+ if the current individual's grade is different from the modal grade at the children age in the host country, 
+ otherwise
+misced	mother's highest level of education (categorical 
+ to 
+)
+fisced	father's highest level of education (categorical 
+ to 
+)
+momwork	indicator: 
+ if mother works, 
+ otherwise
+dadwork	indicator: 
+ if father works, 
+ otherwise
+lgdppc	log per capita GDP of the country
+homepos	index of cultural possessions (positive values imply higher)
+pcgirls	PISA index of the proportion of girls enrolled in each school
+private	indicator: 
+ if school is private, 
+ otherwise
+metropolis	indicator: 
+ if school is a metropolitan area, 
+ otherwise
+background	parents' (both) country of birth
+country	host country
+stweight	sample weights to be used in regressions
+(40 pts) Replicate Figure 1 on page 258.
+
+You first need to calculate math gender gap values by country of ancestry (i.e., by 
+).
+To this end, you need to regress 
+ on 
+ dummy by 
+ country, and save the slope estimates for the female dummy.
+Then, you can generate a scatter plot where 
+-axis is the 
+ of the ancestry country, and 
+-axis is the math gender gap estimates of the ancestry country from the regressions.
+(60 pts) Replicate Table 1 on page 260 (need not be exact).
+
+Estimate six different specifications.
+Pay attention to the set regressors in each specification.
+Note that in all specifications the dependent variables is 
+.
+You need to include cohort fixed effects (
+), ancestry country fixed effects (
+), host country fixed effects (
+), and the interaction of female dummy with host country fixed effects (
+) in all specifications except the third, where there are no ancestry country fixed effects.
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+import seaborn as sns
+from stargazer.stargazer import Stargazer
+from IPython.core.display import display, HTML
+C:\Users\Salman Khan\AppData\Local\Temp\ipykernel_20060\2077509611.py:8: DeprecationWarning: Importing display from IPython.core.display is deprecated since IPython 7.14, please import from IPython display
+  from IPython.core.display import display, HTML
+df = pd.read_csv(r'C:\Users\Salman Khan\Downloads\MIDTERM\Final_sample.csv')
+df.head()
+year	background	cnt	country	female	age	diffgrade	fisced	misced	momwork	...	gdppc	hdi	lgdppc	obs	norigin	stratum2003	hostregion	stratum2006	stratum2009	stratum2012
+0	2012	Bolivia	ARG	Argentina	0	15.75	0	6.0	6.0	0.0	...	3791.675	0.659	8.240563	131	4	NaN	3202	NaN	NaN	ARG0102
+1	2009	Bolivia	ARG	Argentina	1	15.33	1	5.0	0.0	NaN	...	3791.675	0.659	8.240563	131	4	NaN	3203	NaN	3203.0	NaN
+2	2009	Bolivia	ARG	Argentina	0	15.92	1	NaN	NaN	1.0	...	3791.675	0.659	8.240563	131	4	NaN	3201	NaN	3201.0	NaN
+3	2012	Bolivia	ARG	Argentina	1	16.00	0	2.0	4.0	1.0	...	3791.675	0.659	8.240563	131	4	NaN	3202	NaN	NaN	ARG0102
+4	2009	Bolivia	ARG	Argentina	1	16.17	0	5.0	5.0	0.0	...	3791.675	0.659	8.240563	131	4	NaN	3201	NaN	3201.0	NaN
+5 rows × 37 columns
+
+results = []
+for country in df['background'].unique():
+    country_data = df[df['background'] == country]
+    if len(country_data) > 1:
+        model = smf.ols('pv5math ~ female', data=country_data).fit()
+        results.append({'background': country, 'female_dummy_coef': model.params['female']})
+slope_estimates = pd.DataFrame(results, columns=['background', 'female_dummy_coef'])
+# Merge the data
+merged_data = pd.merge(slope_estimates, df[['background', 'ggi']].drop_duplicates(), on='background')
+
+# Set the style and color palette
+sns.set(style="whitegrid")
+palette = sns.color_palette("viridis", len(merged_data))
+
+# Create the scatter plot
+plt.figure(figsize=(12, 8))
+scatter = sns.scatterplot(x='ggi', y='female_dummy_coef', data=merged_data, s=100, hue='background', palette=palette, edgecolor="w")
+
+# Add labels and title with larger fonts
+plt.xlabel('GGI (Gender Gap Index)', fontsize=14)
+plt.ylabel('Math Gender Gap', fontsize=14)
+plt.title('Math Gender Gap vs GGI by Ancestry Country', fontsize=16, fontweight='bold')
+
+# Add annotations for each point
+for i in range(len(merged_data)):
+    plt.text(merged_data['ggi'].iloc[i] + 0.01, merged_data['female_dummy_coef'].iloc[i],
+             merged_data['background'].iloc[i], fontsize=9, ha='left', va='center')
+
+# Fit a linear regression model and plot the regression line
+regression_model = smf.ols('female_dummy_coef ~ ggi', data=merged_data).fit()
+sns.regplot(x='ggi', y='female_dummy_coef', data=merged_data, scatter=False, color='black', line_kws={"linewidth": 2, "linestyle": "--"})
+
+# Customize gridlines
+plt.grid(True, linestyle='--', alpha=0.7)
+
+# Adjust legend and move it outside the plot
+plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', title='Ancestry Country')
+
+# Show the plot
+plt.tight_layout()
+plt.show()
+
+spec_1 = smf.ols('pv5math ~ female + ggi:female + age + age:female + diffgrade + diffgrade:female',
+                 data=df).fit()
+spec_2 = smf.ols('pv5math ~ female + ggi:female + age + age:female + diffgrade + diffgrade:female + '
+                 'lgdppc:female', 
+                 data=df).fit()
+spec_3 = smf.ols('pv5math ~ female + ggi:female + age + age:female + diffgrade + diffgrade:female + '
+                 'lgdppc:female + ggi + lgdppc', 
+                 data=df).fit()
+spec_4 = smf.ols('pv5math ~ female + ggi:female + age + age:female + diffgrade + diffgrade:female + '
+                 'lgdppc:female + fisced + fisced:female + misced + misced:female', 
+                 data=df).fit()
+spec_5 = smf.ols('pv5math ~ female + ggi:female + age + age:female + diffgrade + diffgrade:female + '
+                 'lgdppc:female + fisced + fisced:female + misced + misced:female + '
+                 'dadwork + dadwork:female + momwork + momwork:female + homepos + homepos:female', 
+                 data=df).fit()
+spec_6 = smf.ols('pv5math ~ female + ggi:female + age + age:female + diffgrade + diffgrade:female + '
+                 'lgdppc:female + fisced + fisced:female + misced + misced:female + '
+                 'dadwork + dadwork:female + momwork + momwork:female + homepos + homepos:female + '
+                 'pcgirls + pcgirls:female + private + private:female + metropolis + metropolis:female', 
+                 data=df).fit()
+stargazer = Stargazer([spec_1, spec_2, spec_3, spec_4, spec_5, spec_6])
+stargazer.covariate_order([
+    "female", 
+    "ggi:female", 
+    "age",
+    "age:female",
+    "diffgrade", 
+    "diffgrade:female",
+    "lgdppc:female", 
+    "fisced",
+    "fisced:female",
+    "misced", 
+    "misced:female",
+    "dadwork", 
+    "dadwork:female",
+    "momwork",
+    "momwork:female",
+    "homepos", 
+    "homepos:female",
+    "pcgirls", 
+    "pcgirls:female",
+    "private", 
+    "private:female",
+    "metropolis",
+    "metropolis:female",
+    "ggi",
+    "lgdppc"
+])
+display(HTML(stargazer.render_html()))
+Dependent variable: pv5math
+(1)	(2)	(3)	(4)	(5)	(6)
+female	-269.259***	-251.097**	-30.756	-76.333	-64.605	-24.618
+(100.272)	(100.346)	(100.880)	(101.990)	(104.499)	(109.839)
+ggi:female	387.245***	437.975***	25.152	303.012***	235.158***	189.000***
+(22.695)	(26.682)	(38.166)	(27.599)	(28.891)	(32.624)
+age	6.700	6.700	8.427*	16.313***	11.605**	12.205**
+(4.487)	(4.485)	(4.446)	(4.575)	(4.673)	(4.912)
+age:female	-0.921	-0.164	-1.892	-5.192	-0.991	-5.180
+(6.298)	(6.298)	(6.240)	(6.393)	(6.514)	(6.840)
+diffgrade	-16.858***	-16.858***	-10.601***	-11.471***	-8.427***	-11.644***
+(2.667)	(2.666)	(2.673)	(2.708)	(2.778)	(2.907)
+diffgrade:female	2.451	3.425	-2.832	0.612	-0.186	1.377
+(3.773)	(3.781)	(3.767)	(3.823)	(3.905)	(4.087)
+lgdppc:female		-6.779***	2.798	-6.500***	-9.416***	-4.119*
+(1.878)	(2.660)	(1.918)	(1.944)	(2.436)
+fisced				9.053***	7.427***	5.774***
+(0.884)	(0.919)	(0.978)
+fisced:female				-1.293	-1.187	-0.627
+(1.252)	(1.292)	(1.372)
+misced				7.678***	5.371***	4.549***
+(0.889)	(0.925)	(0.984)
+misced:female				0.143	0.196	1.269
+(1.261)	(1.301)	(1.381)
+dadwork					19.995***	23.242***
+(6.169)	(6.312)
+dadwork:female					-1.024	-7.069
+(8.359)	(8.555)
+momwork					24.840***	24.460***
+(3.897)	(4.008)
+momwork:female					-4.222	-5.190
+(5.460)	(5.617)
+homepos					19.517***	17.315***
+(1.685)	(1.775)
+homepos:female					3.311	5.160**
+(2.405)	(2.544)
+pcgirls						1.766
+(9.310)
+pcgirls:female						24.073**
+(12.138)
+private						10.268**
+(3.994)
+private:female						-22.491***
+(5.446)
+metropolis						38.966***
+(4.441)
+metropolis:female						-15.933**
+(6.225)
+ggi			412.823***			
+(27.547)			
+lgdppc			-9.578***			
+(1.902)			
+Observations	11527	11527	11527	10221	9408	8259
+R2	0.040	0.041	0.060	0.127	0.166	0.172
+Adjusted R2	0.039	0.040	0.060	0.126	0.164	0.170
+Residual Std. Error	97.249 (df=11520)	97.198 (df=11519)	96.228 (df=11517)	92.302 (df=10209)	89.936 (df=9390)	88.516 (df=8235)
+F Statistic	79.894*** (df=6; 11520)	70.414*** (df=7; 11519)	82.027*** (df=9; 11517)	134.986*** (df=11; 10209)	109.775*** (df=17; 9390)	74.311*** (df=23; 8235)
+Note:	
